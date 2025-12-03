@@ -1,5 +1,12 @@
 #include "common_inc.h"
 
+/**
+ * @file main.cpp
+ * @brief 机器人固件的主入口点和控制循环定义。
+ *
+ * 此文件包含主要应用程序逻辑，包括硬件外围设备（OLED、IMU、定时器、PWM）的设置，
+ * 用于控制循环和显示更新的 FreeRTOS 线程定义，以及主入口点 `Main()`。
+ */
 
 // On-board Screen, can choose from hi2c2 or hi2c0(soft i2c)
 SSD1306 oled(&hi2c0);
@@ -15,6 +22,15 @@ DummyRobot dummy(&hcan1);
 
 /* Thread Definitions -----------------------------------------------------*/
 osThreadId_t controlLoopFixUpdateHandle;
+
+/**
+ * @brief 固定频率控制循环更新的线程。
+ *
+ * 此线程等待定时器中断的通知，然后根据机器人当前的命令模式执行控制操作。
+ * 它处理关节运动、轨迹跟踪和电机调整。
+ *
+ * @param argument 未使用的线程参数。
+ */
 void ThreadControlLoopFixUpdate(void* argument)
 {
     for (;;)
@@ -49,6 +65,14 @@ void ThreadControlLoopFixUpdate(void* argument)
 
 
 osThreadId_t ControlLoopUpdateHandle;
+
+/**
+ * @brief 异步控制循环更新的线程。
+ *
+ * 此线程不断处理来自命令处理程序队列的命令。
+ *
+ * @param argument 未使用的线程参数。
+ */
 void ThreadControlLoopUpdate(void* argument)
 {
     for (;;)
@@ -59,6 +83,14 @@ void ThreadControlLoopUpdate(void* argument)
 
 
 osThreadId_t oledTaskHandle;
+
+/**
+ * @brief 用于更新 OLED 显示屏的线程。
+ *
+ * 此线程定期使用 IMU 数据、关节角度、末端执行器姿态和机器人状态信息更新 OLED 屏幕。
+ *
+ * @param argument 未使用的线程参数。
+ */
 void ThreadOledUpdate(void* argument)
 {
     uint32_t t = micros();
@@ -118,6 +150,12 @@ void ThreadOledUpdate(void* argument)
 
 
 /* Timer Callbacks -------------------------------------------------------*/
+
+/**
+ * @brief 定时器 7 的回调函数。
+ *
+ * 当定时器到期时调用此函数。它通知 `ThreadControlLoopFixUpdate` 线程运行。
+ */
 void OnTimer7Callback()
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -129,6 +167,14 @@ void OnTimer7Callback()
 
 
 /* Default Entry -------------------------------------------------------*/
+
+/**
+ * @brief 主应用程序入口点。
+ *
+ * 初始化通信接口、机器人实例、IMU、OLED 和 PWM。
+ * 创建并启动用户线程（控制循环、显示更新）。
+ * 启动控制循环定时器和调度程序。
+ */
 void Main(void)
 {
     // Init all communication staff, including USB-CDC/VCP/UART/CAN etc.

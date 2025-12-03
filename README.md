@@ -1,4 +1,4 @@
-# Dummy-Robot: Super compact smart robotic-arm
+# Dummy-Robot: 超紧凑智能机械臂
 > **我的超迷你机械臂机器人项目。**
 >
 > 视频介绍：[【自制】我造了一台 钢 铁 侠 的 机 械 臂 ！【硬核】](https://www.bilibili.com/video/BV12341117rG)
@@ -24,7 +24,49 @@
 * 已添加命令行调试工具reftool（基于odrivetool框架）
 * 已添加便携手提箱的模型文件
 
+### 项目简介
 
+本项目旨在构建一个低成本、可复现、高性能的桌面级机械臂。
+
+#### 核心特性
+*   **超紧凑设计**：一体化结构，极简走线。
+*   **闭环步进电机**：基于 STM32 的高性能闭环驱动，支持力矩、速度、位置、轨迹等多种模式。
+*   **模块化硬件**：REF 核心板与底板分离设计，易于扩展和维修。
+*   **强大的上位机**：基于 Unity3D 的可视化操作软件，支持仿真和实时控制。
+*   **多种指令模式**：支持 SEQ（顺序）、INT（实时中断）、TRJ（轨迹跟踪）模式，适应不同应用场景。
+
+#### 软件架构
+*   **Firmware**:
+    *   **Core-STM32F4-fw**: 机械臂主控制器的固件，负责运动学解算、CAN 总线协调和上层指令解析。
+    *   **Ctrl-Step-Driver-STM32F1-fw**: 闭环步进电机驱动器的固件，负责单关节的 FOC 控制、PID/DCE 闭环控制。
+*   **CLI-Tool**: 基于 Python 的命令行工具 `run_shell.py`，用于调试、参数配置和状态监控。
+*   **DummyStudio**: 基于 Unity3D 的上位机软件。
+
+### 快速开始
+
+#### 环境准备
+1.  **硬件**: 准备好 REF 核心板、底板、电机驱动板及相关机械结构。
+2.  **IDE**: 推荐使用 CLion 或 STM32CubeIDE 进行固件编译。
+3.  **Python**: 安装 Python 3.x 及相关依赖（用于 CLI 工具）。
+
+#### 编译与烧录
+1.  **核心板固件**:
+    *   打开 `2.Firmware/Core-STM32F4-fw` 工程。
+    *   编译并烧录至 STM32F4 核心板。
+2.  **驱动器固件**:
+    *   打开 `2.Firmware/Ctrl-Step-Driver-STM32F1-fw` 工程。
+    *   根据电机 ID（1-6）修改配置（见 `UserApp/main.cpp` 中的序列号匹配逻辑或通过 CAN 指令配置）。
+    *   编译并烧录至各关节的电机驱动板。
+
+#### 使用说明
+1.  **上电自检**: 机械臂上电后，电机驱动器会自动进行编码器校准（首次）。
+2.  **连接**:
+    *   通过 USB 连接核心板至 PC。
+    *   运行 `3.Software/CLI-Tool/run_shell.py` 启动调试终端。
+3.  **控制**:
+    *   在 CLI 中输入 `robot` 查看状态。
+    *   使用指令 `robot.MoveJ(...)` 或 `robot.MoveL(...)` 控制机械臂运动。
+    *   或使用 DummyStudio 上位机进行可视化操作。
 
 > 这是视频中原版机械臂的完整设计方案，该方案成本和制作难度都比较高，因此想复现的同学建议再等等我后面会发布的**Dummy青春版**，该版本会有如下改进：
 >
@@ -167,4 +209,3 @@ Dummy固件支持三种不同的指令模式（指令可以由USB、串口、CAN
 > * [odriverobotics/ODrive: High performance motor control (github.com)](https://github.com/odriverobotics/ODrive)
 > * [olikraus/u8g2: U8glib library for monochrome displays, version 2 (github.com)](https://github.com/olikraus/u8g2)
 > * [samuelsadok/fibre: Abstraction layer for painlessly building object oriented distributed systems that just work (github.com)](https://github.com/samuelsadok/fibre)
-

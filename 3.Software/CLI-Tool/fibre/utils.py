@@ -16,7 +16,7 @@ except ImportError:
     print("Could not init terminal features.")
     sys.stdout.flush()
     pass
-    
+
 if sys.version_info < (3, 3):
     class TimeoutError(Exception):
         pass
@@ -24,6 +24,15 @@ else:
     TimeoutError = TimeoutError
 
 def get_serial_number_str(device):
+    """
+    检索设备的序列号作为十六进制字符串。
+
+    Args:
+        device (RemoteObject): 要检查的设备。
+
+    Returns:
+        str: 12 位十六进制序列号或占位符。
+    """
     if hasattr(device, 'serial_number'):
         return format(device.serial_number, 'x').upper()
     else:
@@ -32,12 +41,15 @@ def get_serial_number_str(device):
 ## Threading utils ##
 class Event():
     """
-    Alternative to threading.Event(), enhanced by the subscribe() function
-    that the original fails to provide.
-    @param Trigger: if supplied, the newly created event will be triggered
-                    as soon as the trigger event becomes set
+    threading.Event() 的替代方案，通过提供原始版本未能提供的 subscribe() 函数进行了增强。
     """
     def __init__(self, trigger=None):
+        """
+        初始化 Event。
+
+        Args:
+            trigger (Event): 如果提供，则当设置触发事件时，将触发此新事件。
+        """
         self._evt = threading.Event()
         self._subscribers = []
         self._mutex = threading.Lock()
@@ -45,12 +57,17 @@ class Event():
             trigger.subscribe(lambda: self.set())
 
     def is_set(self):
+        """
+        检查事件是否已设置。
+
+        Returns:
+            bool: 如果已设置则为 True，否则为 False。
+        """
         return self._evt.is_set()
 
     def set(self):
         """
-        Sets the event and invokes all subscribers if the event was
-        not already set
+        设置事件并调用所有订阅者（如果尚未设置事件）。
         """
         self._mutex.acquire()
         try:
@@ -63,10 +80,14 @@ class Event():
 
     def subscribe(self, handler):
         """
-        Invokes the specified handler exactly once as soon as the
-        specified event is set. If the event is already set, the
-        handler is invoked immediately.
-        Returns a function that can be invoked to unsubscribe.
+        一旦设置了指定事件，就立即调用指定的处理程序一次。
+        如果事件已设置，则立即调用处理程序。
+
+        Args:
+            handler (callable): 设置事件时要调用的函数。
+
+        Returns:
+            callable: 处理程序函数（对于取消订阅很有用）。
         """
         if handler is None:
             raise TypeError
@@ -78,8 +99,14 @@ class Event():
         finally:
             self._mutex.release()
         return handler
-    
+
     def unsubscribe(self, handler):
+        """
+        删除订阅者。
+
+        Args:
+            handler (callable): 要删除的处理程序。
+        """
         self._mutex.acquire()
         try:
             self._subscribers.pop(self._subscribers.index(handler))
@@ -87,13 +114,25 @@ class Event():
             self._mutex.release()
 
     def wait(self, timeout=None):
+        """
+        等待事件被设置。
+
+        Args:
+            timeout (float): 等待的最长时间。
+
+        Raises:
+            TimeoutError: 如果发生超时。
+        """
         if not self._evt.wait(timeout=timeout):
             raise TimeoutError()
 
     def trigger_after(self, timeout):
         """
-        Triggers the event after the specified timeout.
-        This function returns immediately.
+        在指定的超时后触发事件。
+        此函数立即返回。
+
+        Args:
+            timeout (float): 触发前的时间（以秒为单位）。
         """
         def delayed_trigger():
             if not self.wait(timeout=timeout):
@@ -101,14 +140,21 @@ class Event():
         threading.Thread(target=delayed_trigger)
         t.daemon = True
         t.start()
-        
+
 
 def wait_any(timeout=None, *events):
     """
-    Blocks until any of the specified events are triggered.
-    Returns the index of the event that was triggerd or raises
-    a TimeoutError
-    Param timeout: A timeout in seconds
+    阻塞直到触发任何指定的事件。
+
+    Args:
+        timeout (float): 超时（以秒为单位）。
+        *events: 可变数量的 Event 对象。
+
+    Returns:
+        int: 触发事件的索引。
+
+    Raises:
+        TimeoutError: 如果在设置任何事件之前超时。
     """
     or_event = threading.Event()
     subscriptions = []
@@ -127,7 +173,7 @@ def wait_any(timeout=None, *events):
 
 class Logger():
     """
-    Logs messages to stdout
+    将消息记录到 stdout，具有可选颜色和处理在交互式提示上方打印的功能。
     """
 
     COLOR_DEFAULT = 0
@@ -153,6 +199,12 @@ class Logger():
     }
 
     def __init__(self, verbose=True):
+        """
+        初始化记录器。
+
+        Args:
+            verbose (bool): 如果为 True，则打印调试消息。
+        """
         self._prefix = ''
         self._skip_bottom_line = False # If true, messages are printed one line above the cursor
         self._verbose = verbose
@@ -161,18 +213,29 @@ class Logger():
             self._stdout_buf = win32console.GetStdHandle(win32console.STD_OUTPUT_HANDLE)
 
     def indent(self, prefix='  '):
+        """
+        创建一个缩进其输出的新 Logger 实例。
+
+        Args:
+            prefix (str): 预先添加到消息的字符串。
+
+        Returns:
+            Logger: 一个新的缩进记录器。
+        """
         indented_logger = Logger()
         indented_logger._prefix = self._prefix + prefix
         return indented_logger
 
     def print_on_second_last_line(self, text, color):
         """
-        Prints a text on the second last line.
-        This can be used to print a message above the command
-        prompt. If the command prompt spans multiple lines
-        there will be glitches.
-        If the printed text spans multiple lines there will also
-        be glitches (though this could be fixed).
+        在倒数第二行打印文本。
+        这可用于在命令提示符上方打印消息。
+        如果命令提示符跨越多行，则会出现故障。
+        如果打印的文本跨越多行，也会出现故障（尽管这可以修复）。
+
+        Args:
+            text (str): 要打印的文本。
+            color (int): 颜色代码。
         """
 
         if platform.system() == 'Windows':
@@ -212,6 +275,13 @@ class Logger():
             self._print_lock.release()
 
     def print_colored(self, text, color):
+        """
+        将彩色文本打印到 stdout。
+
+        Args:
+            text (str): 要打印的文本。
+            color (int): 颜色代码。
+        """
         if self._skip_bottom_line:
             self.print_on_second_last_line(text, color)
         else:
@@ -222,16 +292,22 @@ class Logger():
             self._print_lock.release()
 
     def debug(self, text):
+        """记录调试消息（如果详细）。"""
         if self._verbose:
             self.print_colored(self._prefix + text, Logger.COLOR_DEFAULT)
     def success(self, text):
+        """以绿色记录成功消息。"""
         self.print_colored(self._prefix + text, Logger.COLOR_GREEN)
     def info(self, text):
+        """记录信息消息。"""
         self.print_colored(self._prefix + text, Logger.COLOR_DEFAULT)
     def notify(self, text):
+        """以青色记录通知。"""
         self.print_colored(self._prefix + text, Logger.COLOR_CYAN)
     def warn(self, text):
+        """以黄色记录警告。"""
         self.print_colored(self._prefix + text, Logger.COLOR_YELLOW)
     def error(self, text):
+        """以红色记录错误。"""
         # TODO: write to stderr
         self.print_colored(self._prefix + text, Logger.COLOR_RED)

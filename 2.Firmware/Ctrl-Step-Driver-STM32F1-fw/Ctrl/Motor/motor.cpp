@@ -3,7 +3,12 @@
 
 #include <cmath>
 
-
+/**
+ * @brief 执行 20kHz 频率的电机控制任务。
+ *
+ * 1. 更新编码器角度。
+ * 2. 执行闭环控制计算。
+ */
 void Motor::Tick20kHz()
 {
     // 1.Encoder data Update
@@ -14,18 +19,35 @@ void Motor::Tick20kHz()
 }
 
 
+/**
+ * @brief 绑定编码器对象。
+ *
+ * @param _encoder 编码器实例指针。
+ */
 void Motor::AttachEncoder(EncoderBase* _encoder)
 {
     encoder = _encoder;
 }
 
 
+/**
+ * @brief 绑定驱动器对象。
+ *
+ * @param _driver 驱动器实例指针。
+ */
 void Motor::AttachDriver(DriverBase* _driver)
 {
     driver = _driver;
 }
 
 
+/**
+ * @brief 闭环控制逻辑的核心函数。
+ *
+ * 此函数在每个控制周期（20kHz）被调用。
+ * 它处理位置更新、速度估计、错误计算，并根据当前模式执行 PID 或 DCE 控制算法。
+ * 它还管理电机状态（堵转、过载、禁用等）和运动规划器。
+ */
 void Motor::CloseLoopControlTick()
 {
     /************************************ First Called ************************************/
@@ -335,6 +357,11 @@ void Motor::CloseLoopControlTick()
 }
 
 
+/**
+ * @brief 将目标电流计算并输出到 FOC 控制器。
+ *
+ * @param current 目标电流。
+ */
 void Motor::Controller::CalcCurrentToOutput(int32_t current)
 {
     focCurrent = current;
@@ -349,6 +376,11 @@ void Motor::Controller::CalcCurrentToOutput(int32_t current)
 }
 
 
+/**
+ * @brief 计算 PID 速度控制输出。
+ *
+ * @param _speed 目标速度。
+ */
 void Motor::Controller::CalcPidToOutput(int32_t _speed)
 {
     config->pid.vErrorLast = config->pid.vError;
@@ -379,6 +411,12 @@ void Motor::Controller::CalcPidToOutput(int32_t _speed)
 }
 
 
+/**
+ * @brief 计算 DCE 位置控制输出。
+ *
+ * @param _location 目标位置。
+ * @param _speed 目标速度。
+ */
 void Motor::Controller::CalcDceToOutput(int32_t _location, int32_t _speed)
 {
     config->dce.pError = _location - estPosition;
@@ -412,12 +450,23 @@ void Motor::Controller::CalcDceToOutput(int32_t _location, int32_t _speed)
 }
 
 
+/**
+ * @brief 设置控制模式。
+ *
+ * @param _mode 请求的电机模式。
+ */
 void Motor::Controller::SetCtrlMode(Motor::Mode_t _mode)
 {
     requestMode = _mode;
 }
 
 
+/**
+ * @brief 添加轨迹设定点。
+ *
+ * @param _pos 目标位置。
+ * @param _vel 目标速度。
+ */
 void Motor::Controller::AddTrajectorySetPoint(int32_t _pos, int32_t _vel)
 {
     SetPositionSetPoint(_pos);
@@ -425,12 +474,26 @@ void Motor::Controller::AddTrajectorySetPoint(int32_t _pos, int32_t _vel)
 }
 
 
+/**
+ * @brief 设置位置设定点。
+ *
+ * @param _pos 目标位置。
+ */
 void Motor::Controller::SetPositionSetPoint(int32_t _pos)
 {
     goalPosition = _pos + context->config.motionParams.encoderHomeOffset;
 }
 
 
+/**
+ * @brief 在给定时间内设置位置设定点。
+ *
+ * 计算是否可以在给定时间内以当前加速度限制到达目标位置。
+ *
+ * @param _pos 目标位置。
+ * @param _time 期望时间。
+ * @return true 设定点有效且已设置，false 无法在时间内到达（速度被限制）。
+ */
 bool Motor::Controller::SetPositionSetPointWithTime(int32_t _pos, float _time)
 {
     int32_t deltaPos = abs(_pos - realPosition + context->config.motionParams.encoderHomeOffset);
@@ -458,6 +521,11 @@ bool Motor::Controller::SetPositionSetPointWithTime(int32_t _pos, float _time)
 }
 
 
+/**
+ * @brief 设置速度设定点。
+ *
+ * @param _vel 目标速度。
+ */
 void Motor::Controller::SetVelocitySetPoint(int32_t _vel)
 {
     if ((_vel >= -context->config.motionParams.ratedVelocity) &&
@@ -468,6 +536,12 @@ void Motor::Controller::SetVelocitySetPoint(int32_t _vel)
 }
 
 
+/**
+ * @brief 获取当前位置。
+ *
+ * @param _isLap 是否返回圈数相关的绝对位置，默认为 false。
+ * @return 位置值（单位：圈）。
+ */
 float Motor::Controller::GetPosition(bool _isLap)
 {
     return _isLap ?
@@ -479,18 +553,33 @@ float Motor::Controller::GetPosition(bool _isLap)
 }
 
 
+/**
+ * @brief 获取当前速度。
+ *
+ * @return 速度值（单位：圈/秒）。
+ */
 float Motor::Controller::GetVelocity()
 {
     return (float) estVelocity / (float) context->MOTOR_ONE_CIRCLE_SUBDIVIDE_STEPS;
 }
 
 
+/**
+ * @brief 获取 FOC 电流。
+ *
+ * @return 电流值（安培）。
+ */
 float Motor::Controller::GetFocCurrent()
 {
     return (float) focCurrent / 1000.f;
 }
 
 
+/**
+ * @brief 设置电流设定点。
+ *
+ * @param _cur 目标电流。
+ */
 void Motor::Controller::SetCurrentSetPoint(int32_t _cur)
 {
     if (_cur > context->config.motionParams.ratedCurrent)
@@ -502,12 +591,22 @@ void Motor::Controller::SetCurrentSetPoint(int32_t _cur)
 }
 
 
+/**
+ * @brief 设置禁用状态。
+ *
+ * @param _disable true 禁用电机。
+ */
 void Motor::Controller::SetDisable(bool _disable)
 {
     goalDisable = _disable;
 }
 
 
+/**
+ * @brief 设置刹车状态。
+ *
+ * @param _brake true 刹车电机。
+ */
 void Motor::Controller::SetBrake(bool _brake)
 {
     goalBrake = _brake;
@@ -515,6 +614,9 @@ void Motor::Controller::SetBrake(bool _brake)
 }
 
 
+/**
+ * @brief 清除堵转标志。
+ */
 void Motor::Controller::ClearStallFlag()
 {
     stalledTime = 0;
@@ -522,6 +624,15 @@ void Motor::Controller::ClearStallFlag()
 }
 
 
+/**
+ * @brief 补偿高级角度。
+ *
+ * 根据速度对传感器滞后进行补偿。
+ * 注意：代码是针对 DPS 系列传感器的，对于 TLE5012/MT6816 需要重新测量和更新。
+ *
+ * @param _vel 当前速度。
+ * @return 补偿角度值。
+ */
 int32_t Motor::Controller::CompensateAdvancedAngle(int32_t _vel)
 {
     /*
@@ -552,6 +663,11 @@ int32_t Motor::Controller::CompensateAdvancedAngle(int32_t _vel)
 }
 
 
+/**
+ * @brief 初始化控制器。
+ *
+ * 重置所有状态变量、目标值和积分项。
+ */
 void Motor::Controller::Init()
 {
     requestMode = boardConfig.enableMotorOnBoot ? static_cast<Mode_t>(boardConfig.defaultMode) : MODE_STOP;
@@ -612,6 +728,9 @@ void Motor::Controller::Init()
 }
 
 
+/**
+ * @brief 将当前位置应用为原点偏移。
+ */
 void Motor::Controller::ApplyPosAsHomeOffset()
 {
     context->config.motionParams.encoderHomeOffset = realPosition %
@@ -619,12 +738,20 @@ void Motor::Controller::ApplyPosAsHomeOffset()
 }
 
 
+/**
+ * @brief 绑定配置结构体。
+ *
+ * @param _config 配置结构体指针。
+ */
 void Motor::Controller::AttachConfig(Motor::Controller::Config_t* _config)
 {
     config = _config;
 }
 
 
+/**
+ * @brief 清除积分项。
+ */
 void Motor::Controller::ClearIntegral() const
 {
     config->pid.integralRound = 0;
@@ -635,5 +762,3 @@ void Motor::Controller::ClearIntegral() const
     config->dce.integralRemainder = 0;
     config->dce.outputKi = 0;
 }
-
-

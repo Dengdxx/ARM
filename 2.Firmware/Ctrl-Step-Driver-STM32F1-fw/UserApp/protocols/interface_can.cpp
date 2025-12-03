@@ -2,6 +2,13 @@
 #include "configurations.h"
 #include <can.h>
 
+/**
+ * @file interface_can.cpp
+ * @brief CAN 通信接口实现。
+ *
+ * 此文件包含处理接收到的 CAN 帧的回调函数，
+ * 实现了一套用于控制电机、查询状态和配置参数的协议。
+ */
 
 extern Motor motor;
 extern EncoderCalibrator encoderCalibrator;
@@ -17,6 +24,16 @@ CAN_TxHeaderTypeDef txHeader =
     };
 
 
+/**
+ * @brief 处理接收到的 CAN 命令。
+ *
+ * 根据命令 ID (`_cmd`) 执行相应的操作，如设置电机模式、
+ * 设定点、PID 参数、限制值，以及查询状态或执行系统操作（重启、保存配置）。
+ *
+ * @param _cmd 命令 ID。
+ * @param _data 数据缓冲区指针。
+ * @param _len 数据长度。
+ */
 void OnCanCmd(uint8_t _cmd, uint8_t* _data, uint32_t _len)
 {
     float tmpF;
