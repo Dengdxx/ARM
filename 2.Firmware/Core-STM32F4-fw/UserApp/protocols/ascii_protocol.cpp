@@ -2,7 +2,16 @@
 
 extern DummyRobot dummy;
 
-
+/**
+ * @brief 处理通过 USB 接收到的 ASCII 命令。
+ *
+ * 解析并执行命令以控制机器人，例如启动、停止、禁用、获取状态和设置命令模式。
+ * 将响应发送回响应通道。
+ *
+ * @param _cmd 接收到的命令字符串。
+ * @param _len 命令字符串的长度。
+ * @param _responseChannel 发送响应的流接收器。
+ */
 void OnUsbAsciiCmd(const char* _cmd, size_t _len, StreamSink &_responseChannel)
 {
     /*---------------------------- ↓ Add Your CMDs Here ↓ -----------------------------*/
@@ -56,6 +65,15 @@ void OnUsbAsciiCmd(const char* _cmd, size_t _len, StreamSink &_responseChannel)
 }
 
 
+/**
+ * @brief 处理通过 UART4 接收到的 ASCII 命令。
+ *
+ * 此函数的行为类似于 `OnUsbAsciiCmd`，但处理来自 UART4 接口的命令。
+ *
+ * @param _cmd 接收到的命令字符串。
+ * @param _len 命令字符串的长度。
+ * @param _responseChannel 发送响应的流接收器。
+ */
 void OnUart4AsciiCmd(const char* _cmd, size_t _len, StreamSink &_responseChannel)
 {
     /*---------------------------- ↓ Add Your CMDs Here ↓ -----------------------------*/
@@ -108,6 +126,15 @@ void OnUart4AsciiCmd(const char* _cmd, size_t _len, StreamSink &_responseChannel
 }
 
 
+/**
+ * @brief 处理通过 UART5 接收到的 ASCII 命令。
+ *
+ * 目前此函数为空，但可用于处理来自 UART5 接口的特定命令。
+ *
+ * @param _cmd 接收到的命令字符串。
+ * @param _len 命令字符串的长度。
+ * @param _responseChannel 发送响应的流接收器。
+ */
 void OnUart5AsciiCmd(const char* _cmd, size_t _len, StreamSink &_responseChannel)
 {
     /*---------------------------- ↓ Add Your CMDs Here ↓ -----------------------------*/

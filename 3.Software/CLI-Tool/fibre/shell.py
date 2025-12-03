@@ -9,9 +9,16 @@ def did_discover_device(device,
                         branding_short, branding_long,
                         logger, app_shutdown_token):
     """
-    Handles the discovery of new devices by displaying a
-    message and making the device available to the interactive
-    console
+    通过显示消息并使设备可用于交互式控制台来处理新设备的发现。
+
+    Args:
+        device (RemoteObject): 发现的设备。
+        interactive_variables (dict): shell 的变量字典。
+        discovered_devices (list): 发现设备的序列号列表。
+        branding_short (str): 变量的短名称（例如 'dev'）。
+        branding_long (str): 日志记录的长名称（例如 'device'）。
+        logger (Logger): 记录器实例。
+        app_shutdown_token (Event): 发出关闭信号的令牌。
     """
     serial_number = '{:012X}'.format(device.serial_number) if hasattr(device, 'serial_number') else "[unknown serial number]"
     if serial_number in discovered_devices:
@@ -33,8 +40,12 @@ def did_discover_device(device,
 
 def did_lose_device(interactive_name, logger, app_shutdown_token):
     """
-    Handles the disappearance of a device by displaying
-    a message.
+    通过显示消息来处理设备的丢失。
+
+    Args:
+        interactive_name (str): 丢失设备的变量名称。
+        logger (Logger): 记录器实例。
+        app_shutdown_token (Event): 发出关闭信号的令牌。
     """
     if not app_shutdown_token.is_set():
         logger.warn("Oh no {} disappeared".format(interactive_name))
@@ -45,11 +56,19 @@ def launch_shell(args,
                 logger, app_shutdown_token,
                 branding_short="dev", branding_long="device"):
     """
-    Launches an interactive python or IPython command line
-    interface.
-    As devices are connected they are made available as
-    "dev0", "dev1", ...
-    The names of the variables can be customized by setting branding_short.
+    启动交互式 Python 或 IPython 命令行界面。
+    随着设备的连接，它们将作为 "dev0", "dev1", ... 可用。
+    变量的名称可以通过设置 branding_short 来自定义。
+
+    Args:
+        args (Namespace): 命令行参数。
+        interactive_variables (dict): shell 的初始变量。
+        print_banner (callable): 打印启动横幅的函数。
+        print_help (callable): 打印帮助消息的函数。
+        logger (Logger): 记录器实例。
+        app_shutdown_token (Event): 发出关闭信号的令牌。
+        branding_short (str): 短变量前缀（默认 "dev"）。
+        branding_long (str): 长描述名称（默认 "device"）。
     """
 
     discovered_devices = []
