@@ -7,10 +7,27 @@ import fibre.protocol
 from fibre.utils import wait_any, TimeoutError
 
 def noprint(x):
+  """
+  无操作打印函数。
+
+  Args:
+      x: 要打印的参数（被忽略）。
+  """
   pass
 
 class TCPTransport(fibre.protocol.StreamSource, fibre.protocol.StreamSink):
+  """
+  通过 TCP 连接实现 StreamSource 和 StreamSink。
+  """
   def __init__(self, dest_addr, dest_port, logger):
+    """
+    初始化 TCP 传输并连接到目的地。
+
+    Args:
+        dest_addr (str): 目标主机名或 IP 地址。
+        dest_port (int): 目标端口。
+        logger (Logger): 记录器实例。
+    """
     # TODO: FIXME: use IPv6
     # Problem: getaddrinfo fails if the resolver returns an
     # IPv4 address, but we are using AF_INET6
@@ -23,14 +40,29 @@ class TCPTransport(fibre.protocol.StreamSource, fibre.protocol.StreamSink):
     self.sock.connect(self.target)
 
   def process_bytes(self, buffer):
+    """
+    通过 TCP 连接发送字节。
+
+    Args:
+        buffer (bytes): 要发送的数据。
+    """
     self.sock.send(buffer)
 
   def get_bytes(self, n_bytes, deadline):
     """
-    Returns n bytes unless the deadline is reached, in which case the bytes
-    that were read up to that point are returned. If deadline is None the
-    function blocks forever. A deadline before the current time corresponds
-    to non-blocking mode.
+    返回 n 个字节，除非达到截止日期，在这种情况下返回此时读取的字节。
+    如果截止日期为 None，则函数将永远阻塞。
+    当前时间之前的截止日期对应于非阻塞模式。
+
+    Args:
+        n_bytes (int): 要读取的字节数。
+        deadline (float): 时间戳截止日期。
+
+    Returns:
+        bytes: 读取的数据。
+
+    Raises:
+        TimeoutError: 如果超出截止日期（在 get_bytes_or_fail 内部）。
     """
     # convert deadline to seconds (floating point)
     deadline = None if deadline is None else max(deadline - time.monotonic(), 0)
@@ -47,6 +79,19 @@ class TCPTransport(fibre.protocol.StreamSource, fibre.protocol.StreamSink):
         raise TimeoutError
 
   def get_bytes_or_fail(self, n_bytes, deadline):
+    """
+    尝试在截止日期之前读取确切的 n 个字节。
+
+    Args:
+        n_bytes (int): 要读取的字节数。
+        deadline (float): 时间戳截止日期。
+
+    Returns:
+        bytes: 读取的数据。
+
+    Raises:
+        TimeoutError: 如果读取的字节数少于 n_bytes。
+    """
     result = self.get_bytes(n_bytes, deadline)
     if len(result) < n_bytes:
       raise TimeoutError("expected {} bytes but got only {}".format(n_bytes, len(result)))
@@ -56,9 +101,17 @@ class TCPTransport(fibre.protocol.StreamSource, fibre.protocol.StreamSink):
 
 def discover_channels(path, serial_number, callback, cancellation_token, channel_termination_token, logger):
   """
-  Tries to connect to a TCP server based on the path spec.
-  This function blocks until cancellation_token is set.
-  Channels spawned by this function run until channel_termination_token is set.
+  尝试基于路径规范连接到 TCP 服务器。
+  此函数阻塞直到设置了 cancellation_token。
+  由此函数生成的通道运行，直到设置了 channel_termination_token。
+
+  Args:
+      path (str): 格式为 "host:port" 的路径规范。
+      serial_number (str): (未使用)。
+      callback (callable): 用于调用发现通道的函数。
+      cancellation_token (Event): 停止发现的信号。
+      channel_termination_token (Event): 终止通道的信号。
+      logger (Logger): 记录器实例。
   """
   try:
     dest_addr = ':'.join(path.split(":")[:-1])

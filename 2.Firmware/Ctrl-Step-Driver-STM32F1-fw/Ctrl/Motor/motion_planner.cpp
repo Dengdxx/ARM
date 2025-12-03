@@ -1,13 +1,20 @@
 #include "motion_planner.h"
 #include "math.h"
 
-
+/**
+ * @brief 初始化电流跟踪器。
+ */
 void MotionPlanner::CurrentTracker::Init()
 {
     SetCurrentAcc(context->config->ratedCurrentAcc);
 }
 
 
+/**
+ * @brief 启动新的电流跟踪任务。
+ *
+ * @param _realCurrent 当前实际电流。
+ */
 void MotionPlanner::CurrentTracker::NewTask(int32_t _realCurrent)
 {
     currentIntegral = 0;
@@ -15,6 +22,13 @@ void MotionPlanner::CurrentTracker::NewTask(int32_t _realCurrent)
 }
 
 
+/**
+ * @brief 计算电流跟踪的软目标（平滑过渡）。
+ *
+ * 根据加速度限制，逐步调整当前跟踪电流向目标电流逼近。
+ *
+ * @param _goalCurrent 目标电流。
+ */
 void MotionPlanner::CurrentTracker::CalcSoftGoal(int32_t _goalCurrent)
 {
     int32_t deltaCurrent = _goalCurrent - trackCurrent;
@@ -66,6 +80,11 @@ void MotionPlanner::CurrentTracker::CalcSoftGoal(int32_t _goalCurrent)
 }
 
 
+/**
+ * @brief 计算电流积分，更新跟踪电流。
+ *
+ * @param _current 当前的变化量（加速度/加电流度）。
+ */
 void MotionPlanner::CurrentTracker::CalcCurrentIntegral(int32_t _current)
 {
     currentIntegral += _current;
@@ -74,24 +93,42 @@ void MotionPlanner::CurrentTracker::CalcCurrentIntegral(int32_t _current)
 }
 
 
+/**
+ * @brief 设置电流变化率（加速度）。
+ *
+ * @param _currentAcc 电流加速度值。
+ */
 void MotionPlanner::CurrentTracker::SetCurrentAcc(int32_t _currentAcc)
 {
     currentAcc = _currentAcc;
 }
 
 
+/**
+ * @brief 初始化速度跟踪器。
+ */
 void MotionPlanner::VelocityTracker::Init()
 {
     SetVelocityAcc(context->config->ratedVelocityAcc);
 }
 
 
+/**
+ * @brief 设置速度加速度。
+ *
+ * @param _velocityAcc 速度加速度值。
+ */
 void MotionPlanner::VelocityTracker::SetVelocityAcc(int32_t _velocityAcc)
 {
     velocityAcc = _velocityAcc;
 }
 
 
+/**
+ * @brief 启动新的速度跟踪任务。
+ *
+ * @param _realVelocity 当前实际速度。
+ */
 void MotionPlanner::VelocityTracker::NewTask(int32_t _realVelocity)
 {
     velocityIntegral = 0;
@@ -99,6 +136,13 @@ void MotionPlanner::VelocityTracker::NewTask(int32_t _realVelocity)
 }
 
 
+/**
+ * @brief 计算速度跟踪的软目标。
+ *
+ * 根据加速度限制，逐步调整当前跟踪速度向目标速度逼近。
+ *
+ * @param _goalVelocity 目标速度。
+ */
 void MotionPlanner::VelocityTracker::CalcSoftGoal(int32_t _goalVelocity)
 {
     int32_t deltaVelocity = _goalVelocity - trackVelocity;
@@ -150,6 +194,11 @@ void MotionPlanner::VelocityTracker::CalcSoftGoal(int32_t _goalVelocity)
 }
 
 
+/**
+ * @brief 计算速度积分，更新跟踪速度。
+ *
+ * @param _velocity 速度的变化量（加速度）。
+ */
 void MotionPlanner::VelocityTracker::CalcVelocityIntegral(int32_t _velocity)
 {
     velocityIntegral += _velocity;
@@ -158,6 +207,9 @@ void MotionPlanner::VelocityTracker::CalcVelocityIntegral(int32_t _velocity)
 }
 
 
+/**
+ * @brief 初始化位置跟踪器。
+ */
 void MotionPlanner::PositionTracker::Init()
 {
     SetVelocityAcc(context->config->ratedVelocityAcc);
@@ -170,6 +222,11 @@ void MotionPlanner::PositionTracker::Init()
 }
 
 
+/**
+ * @brief 设置位置模式下的加速度。
+ *
+ * @param value 加速度值。
+ */
 void MotionPlanner::PositionTracker::SetVelocityAcc(int32_t value)
 {
     velocityUpAcc = value;
@@ -178,6 +235,12 @@ void MotionPlanner::PositionTracker::SetVelocityAcc(int32_t value)
 }
 
 
+/**
+ * @brief 启动新的位置跟踪任务。
+ *
+ * @param real_location 当前实际位置。
+ * @param real_speed 当前实际速度。
+ */
 void MotionPlanner::PositionTracker::NewTask(int32_t real_location, int32_t real_speed)
 {
     velocityIntegral = 0;
@@ -187,6 +250,14 @@ void MotionPlanner::PositionTracker::NewTask(int32_t real_location, int32_t real
 }
 
 
+/**
+ * @brief 计算位置跟踪的软目标。
+ *
+ * 使用梯形速度规划或类似的逻辑，计算下一时刻的目标位置和速度，
+ * 确保在加速度限制内到达目标位置。
+ *
+ * @param _goalPosition 最终目标位置。
+ */
 void MotionPlanner::PositionTracker::CalcSoftGoal(int32_t _goalPosition)
 {
     int32_t deltaPosition = _goalPosition - trackPosition;
@@ -330,6 +401,11 @@ void MotionPlanner::PositionTracker::CalcSoftGoal(int32_t _goalPosition)
 }
 
 
+/**
+ * @brief 计算位置积分，更新跟踪位置。
+ *
+ * @param value 速度值。
+ */
 void MotionPlanner::PositionTracker::CalcPositionIntegral(int32_t value)
 {
     positionIntegral += value;
@@ -338,6 +414,11 @@ void MotionPlanner::PositionTracker::CalcPositionIntegral(int32_t value)
 }
 
 
+/**
+ * @brief 计算速度积分，更新跟踪速度。
+ *
+ * @param value 加速度值。
+ */
 void MotionPlanner::PositionTracker::CalcVelocityIntegral(int32_t value)
 {
     velocityIntegral += value;
@@ -346,12 +427,21 @@ void MotionPlanner::PositionTracker::CalcVelocityIntegral(int32_t value)
 }
 
 
+/**
+ * @brief 初始化位置插值器。
+ */
 void MotionPlanner::PositionInterpolator::Init()
 {
 
 }
 
 
+/**
+ * @brief 启动新的插值任务。
+ *
+ * @param _realPosition 当前实际位置。
+ * @param _realVelocity 当前实际速度。
+ */
 void MotionPlanner::PositionInterpolator::NewTask(int32_t _realPosition, int32_t _realVelocity)
 {
     recordPosition = _realPosition;
@@ -361,6 +451,13 @@ void MotionPlanner::PositionInterpolator::NewTask(int32_t _realPosition, int32_t
 }
 
 
+/**
+ * @brief 计算位置插值器的软目标。
+ *
+ * 用于平滑来自上位机的步进/方向或粗略位置指令。
+ *
+ * @param _goalPosition 目标位置。
+ */
 void MotionPlanner::PositionInterpolator::CalcSoftGoal(int32_t _goalPosition)
 {
     recordPositionLast = recordPosition;
@@ -378,12 +475,23 @@ void MotionPlanner::PositionInterpolator::CalcSoftGoal(int32_t _goalPosition)
 }
 
 
+/**
+ * @brief 设置轨迹跟踪的减速度。
+ *
+ * @param value 减速度值。
+ */
 void MotionPlanner::TrajectoryTracker::SetSlowDownVelocityAcc(int32_t value)
 {
     velocityDownAcc = value;
 }
 
 
+/**
+ * @brief 启动新的轨迹跟踪任务。
+ *
+ * @param real_location 当前实际位置。
+ * @param real_speed 当前实际速度。
+ */
 void MotionPlanner::TrajectoryTracker::NewTask(int32_t real_location, int32_t real_speed)
 {
     updateTime = 0;
@@ -395,6 +503,15 @@ void MotionPlanner::TrajectoryTracker::NewTask(int32_t real_location, int32_t re
 }
 
 
+/**
+ * @brief 计算轨迹跟踪的软目标。
+ *
+ * 根据动态目标（位置和速度），计算所需的加速度以跟踪轨迹，
+ * 如果更新超时，则减速。
+ *
+ * @param _goalPosition 目标位置。
+ * @param _goalVelocity 目标速度。
+ */
 void MotionPlanner::TrajectoryTracker::CalcSoftGoal(int32_t _goalPosition, int32_t _goalVelocity)
 {
     if (_goalVelocity != recordVelocity || _goalPosition != recordPosition)
@@ -450,6 +567,11 @@ void MotionPlanner::TrajectoryTracker::CalcSoftGoal(int32_t _goalPosition, int32
 }
 
 
+/**
+ * @brief 计算速度积分。
+ *
+ * @param value 加速度值。
+ */
 void MotionPlanner::TrajectoryTracker::CalcVelocityIntegral(int32_t value)
 {
     dynamicVelocityAccRemainder += value; // sum up last remainder
@@ -458,6 +580,11 @@ void MotionPlanner::TrajectoryTracker::CalcVelocityIntegral(int32_t value)
 }
 
 
+/**
+ * @brief 计算位置积分。
+ *
+ * @param value 速度值。
+ */
 void MotionPlanner::TrajectoryTracker::CalcPositionIntegral(int32_t value)
 {
     velovityNowRemainder += value;
@@ -466,6 +593,11 @@ void MotionPlanner::TrajectoryTracker::CalcPositionIntegral(int32_t value)
 }
 
 
+/**
+ * @brief 初始化轨迹跟踪器。
+ *
+ * @param _updateTimeout 超时时间（毫秒），超过此时间未收到新目标则减速。
+ */
 void MotionPlanner::TrajectoryTracker::Init(int32_t _updateTimeout)
 {
     //SetSlowDownVelocityAcc(context->config->ratedVelocityAcc / 10);
@@ -474,6 +606,11 @@ void MotionPlanner::TrajectoryTracker::Init(int32_t _updateTimeout)
 }
 
 
+/**
+ * @brief 绑定配置结构体，并初始化所有子跟踪器。
+ *
+ * @param _config 配置结构体指针。
+ */
 void MotionPlanner::AttachConfig(MotionPlanner::Config_t* _config)
 {
     config = _config;

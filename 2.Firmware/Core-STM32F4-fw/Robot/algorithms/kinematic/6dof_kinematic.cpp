@@ -10,6 +10,18 @@ inline float sinf(float x)
     return arm_sin_f32(x);
 }
 
+/**
+ * @brief 矩阵乘法。
+ *
+ * 计算两个矩阵的乘积：Out = M1 * M2。
+ *
+ * @param _matrix1 矩阵 1，大小 _m x _l。
+ * @param _matrix2 矩阵 2，大小 _l x _n。
+ * @param _matrixOut 输出矩阵，大小 _m x _n。
+ * @param _m 矩阵 1 的行数。
+ * @param _l 矩阵 1 的列数（等于矩阵 2 的行数）。
+ * @param _n 矩阵 2 的列数。
+ */
 static void MatMultiply(const float* _matrix1, const float* _matrix2, float* _matrixOut,
                         const int _m, const int _l, const int _n)
 {
@@ -29,6 +41,14 @@ static void MatMultiply(const float* _matrix1, const float* _matrix2, float* _ma
     }
 }
 
+/**
+ * @brief 旋转矩阵转欧拉角。
+ *
+ * 将 3x3 旋转矩阵转换为 ZYX 顺序的欧拉角 (Yaw, Pitch, Roll)。
+ *
+ * @param _rotationM 3x3 旋转矩阵。
+ * @param _eulerAngles 输出的欧拉角数组 [C, B, A]。
+ */
 static void RotMatToEulerAngle(const float* _rotationM, float* _eulerAngles)
 {
     float A, B, C, cb;
@@ -59,6 +79,14 @@ static void RotMatToEulerAngle(const float* _rotationM, float* _eulerAngles)
     _eulerAngles[2] = A;
 }
 
+/**
+ * @brief 欧拉角转旋转矩阵。
+ *
+ * 将 ZYX 顺序的欧拉角转换为 3x3 旋转矩阵。
+ *
+ * @param _eulerAngles 输入的欧拉角数组 [C, B, A]。
+ * @param _rotationM 输出的 3x3 旋转矩阵。
+ */
 static void EulerAngleToRotMat(const float* _eulerAngles, float* _rotationM)
 {
     float ca, cb, cc, sa, sb, sc;
@@ -82,6 +110,16 @@ static void EulerAngleToRotMat(const float* _eulerAngles, float* _rotationM)
 }
 
 
+/**
+ * @brief 构造函数，初始化机械臂运动学参数。
+ *
+ * @param L_BS 基座高度。
+ * @param D_BS 基座偏置。
+ * @param L_AM 大臂长度。
+ * @param L_FA 小臂长度。
+ * @param D_EW 肘部宽度。
+ * @param L_WT 腕部长度。
+ */
 DOF6Kinematic::DOF6Kinematic(float L_BS, float D_BS, float L_AM, float L_FA, float D_EW, float L_WT)
     : armConfig(ArmConfig_t{L_BS, D_BS, L_AM, L_FA, D_EW, L_WT})
 {
@@ -111,6 +149,15 @@ DOF6Kinematic::DOF6Kinematic(float L_BS, float D_BS, float L_AM, float L_FA, flo
     atan_e = 0;
 }
 
+/**
+ * @brief 求解正向运动学 (FK)。
+ *
+ * 根据给定的关节角度，计算末端执行器的位姿（位置和姿态）。
+ *
+ * @param _inputJoint6D 输入的 6 个关节角度（度）。
+ * @param _outputPose6D 输出的末端执行器 6D 位姿。
+ * @return true 求解成功。
+ */
 bool
 DOF6Kinematic::SolveFK(const DOF6Kinematic::Joint6D_t &_inputJoint6D, DOF6Kinematic::Pose6D_t &_outputPose6D)
 {
@@ -179,6 +226,16 @@ DOF6Kinematic::SolveFK(const DOF6Kinematic::Joint6D_t &_inputJoint6D, DOF6Kinema
     return true;
 }
 
+/**
+ * @brief 求解逆向运动学 (IK)。
+ *
+ * 根据给定的末端执行器位姿，计算可能的关节角度组合。
+ *
+ * @param _inputPose6D 输入的末端执行器位姿。
+ * @param _lastJoint6D 上一次的关节角度，用于选择最优解（接近当前姿态）。
+ * @param _outputSolves 输出的可能的关节角度解集。
+ * @return true 求解成功。
+ */
 bool DOF6Kinematic::SolveIK(const DOF6Kinematic::Pose6D_t &_inputPose6D, const Joint6D_t &_lastJoint6D,
                             DOF6Kinematic::IKSolves_t &_outputSolves)
 {

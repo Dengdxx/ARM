@@ -7,10 +7,27 @@ import fibre.protocol
 from fibre.utils import wait_any
 
 def noprint(x):
+  """
+  无操作打印函数。
+
+  Args:
+      x: 要打印的参数（被忽略）。
+  """
   pass
 
 class UDPTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
+  """
+  通过 UDP 实现 PacketSource 和 PacketSink。
+  """
   def __init__(self, dest_addr, dest_port, logger):
+    """
+    初始化 UDP 传输。
+
+    Args:
+        dest_addr (str): 目标地址（主机名或 IP）。
+        dest_port (int): 目标端口。
+        logger (Logger): 记录器实例。
+    """
     # TODO: FIXME: use IPv6
     # Problem: getaddrinfo fails if the resolver returns an
     # IPv4 address, but we are using AF_INET6
@@ -21,9 +38,27 @@ class UDPTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
     self.target = socket.getaddrinfo(dest_addr,dest_port, family)[0][4]
 
   def process_packet(self, buffer):
+    """
+    通过 UDP 发送数据包。
+
+    Args:
+        buffer (bytes): 数据包数据。
+    """
     self.sock.sendto(buffer, self.target)
 
   def get_packet(self, deadline):
+    """
+    通过 UDP 接收数据包。
+
+    Args:
+        deadline (float): 时间戳截止日期。
+
+    Returns:
+        bytes: 接收到的数据包数据。
+
+    Raises:
+        TimeoutError: 如果在截止日期之前未收到数据包。
+    """
     # TODO: implement deadline
     deadline = None if deadline is None else max(deadline - time.monotonic(), 0)
     self.sock.settimeout(deadline)
@@ -40,9 +75,17 @@ class UDPTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
 
 def discover_channels(path, serial_number, callback, cancellation_token, channel_termination_token, logger):
   """
-  Tries to connect to a UDP server based on the path spec.
-  This function blocks until cancellation_token is set.
-  Channels spawned by this function run until channel_termination_token is set.
+  尝试基于路径规范连接到 UDP 服务器。
+  此函数阻塞直到设置了 cancellation_token。
+  由此函数生成的通道运行，直到设置了 channel_termination_token。
+
+  Args:
+      path (str): 路径规范 "host:port"。
+      serial_number (str): (未使用)。
+      callback (callable): 使用发现的通道调用的函数。
+      cancellation_token (Event): 停止发现的信号。
+      channel_termination_token (Event): 终止通道的信号。
+      logger (Logger): 记录器实例。
   """
   try:
     dest_addr = ':'.join(path.split(":")[:-1])

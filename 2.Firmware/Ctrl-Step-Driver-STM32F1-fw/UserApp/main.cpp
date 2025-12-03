@@ -3,6 +3,13 @@
 #include "Platform/Utils/st_hardware.h"
 #include <tim.h>
 
+/**
+ * @file main.cpp
+ * @brief 步进电机驱动器固件的主入口点和控制逻辑。
+ *
+ * 此文件包含主要应用程序逻辑，包括硬件初始化、EEPROM 配置加载、
+ * 电机控制对象实例化、按钮事件处理以及定时器回调。
+ */
 
 /* Component Definitions -----------------------------------------------------*/
 BoardConfig_t boardConfig;
@@ -17,6 +24,20 @@ Led statusLed;
 
 
 /* Main Entry ----------------------------------------------------------------*/
+
+/**
+ * @brief 主函数。
+ *
+ * 执行以下操作：
+ * 1. 识别硬件序列号并设置默认 CAN 节点 ID。
+ * 2. 从 EEPROM 加载配置，如果无效则使用默认值。
+ * 3. 将配置应用到电机控制参数。
+ * 4. 初始化电机驱动器、编码器和控制器。
+ * 5. 初始化外设（按钮）。
+ * 6. 启动控制循环定时器 (100Hz 和 20kHz)。
+ * 7. 检查是否触发编码器校准。
+ * 8. 进入主循环处理 EEPROM 保存和校准任务。
+ */
 void Main()
 {
     uint64_t serialNum = GetSerialNumber();
@@ -126,6 +147,12 @@ void Main()
 
 
 /* Event Callbacks -----------------------------------------------------------*/
+
+/**
+ * @brief 定时器 1 回调函数 (100Hz)。
+ *
+ * 处理低频任务，如按钮扫描和 LED 状态更新。
+ */
 extern "C" void Tim1Callback100Hz()
 {
     __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
@@ -136,6 +163,11 @@ extern "C" void Tim1Callback100Hz()
 }
 
 
+/**
+ * @brief 定时器 4 回调函数 (20kHz)。
+ *
+ * 处理高频控制任务，包括编码器校准滴答或电机控制循环滴答。
+ */
 extern "C" void Tim4Callback20kHz()
 {
     __HAL_TIM_CLEAR_IT(&htim4, TIM_IT_UPDATE);
@@ -147,6 +179,14 @@ extern "C" void Tim4Callback20kHz()
 }
 
 
+/**
+ * @brief 按钮 1 事件处理程序。
+ *
+ * @param _event 发生的事件类型。
+ *
+ * - 长按：系统复位。
+ * - 单击：切换电机的启停状态。
+ */
 void OnButton1Event(Button::Event _event)
 {
     switch (_event)
@@ -172,6 +212,14 @@ void OnButton1Event(Button::Event _event)
 }
 
 
+/**
+ * @brief 按钮 2 事件处理程序。
+ *
+ * @param _event 发生的事件类型。
+ *
+ * - 长按：将当前模式的设定点归零。
+ * - 单击：清除堵转标志。
+ */
 void OnButton2Event(Button::Event _event)
 {
     switch (_event)
