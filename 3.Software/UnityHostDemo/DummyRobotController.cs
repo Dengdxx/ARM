@@ -13,18 +13,6 @@ namespace DummyRobot.Control
         public float[] currentJoints = new float[6];
         public float[] currentPose = new float[6];
 
-        [Header("Visualization")]
-        [Tooltip("Drag the 6 joint Transforms from your imported URDF model here.")]
-        public Transform[] jointTransforms = new Transform[6];
-
-        [Tooltip("Define the rotation axis for each joint (e.g., (0,0,1) for Z-axis).")]
-        public Vector3[] rotationAxes = new Vector3[6] {
-            Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up, Vector3.up
-        };
-
-        [Tooltip("If using Unity's URDF Importer with ArticulationBodies, set this to true.")]
-        public bool useArticulationBody = false;
-
         // Callback events for UI update
         public event Action<float[]> OnJointsUpdated;
         public event Action<float[]> OnPoseUpdated;
@@ -33,11 +21,6 @@ namespace DummyRobot.Control
         {
             _connection = GetComponent<Communication.RobotConnection>();
             _connection.OnMessageReceived += HandleMessage;
-        }
-
-        private void Update()
-        {
-            UpdateVisualization();
         }
 
         public void ConnectToRobot()
@@ -136,50 +119,22 @@ namespace DummyRobot.Control
                     {
                         // Determining if it's joints or pose is ambiguous from just "ok ...",
                         // but usually follows the request.
-                        // We assume joints update by default as it's most common for synchronization.
+                        // Ideally the firmware would prefix responses differently (e.g. "JPOS:..." vs "LPOS:...").
+                        // For this demo, we assume the user tracks what they requested, or we just update local state blindly.
+                        // *Observation from Firmware*:
+                        // GETJPOS -> "ok %.2f..."
+                        // GETLPOS -> "ok %.2f..."
+                        // This is a firmware design limitation. We will update based on context or just store it.
+                        // Given Unity update loop, we can store it in a generic "LastReceivedData" or try to guess.
 
+                        // We will broadcast it as generic data for now, user logic handles context.
+                        // Or we could check if values look like valid joints vs pose.
+                        // Let's assume it's joints update by default as it's most common for synchronization.
+
+                        // NOTE: In a real robust app, we would modify firmware to send "#JPOS:..." and "#LPOS:..."
                         currentJoints = values;
                         OnJointsUpdated?.Invoke(values);
                     }
-                }
-            }
-        }
-
-        private void UpdateVisualization()
-        {
-            for (int i = 0; i < 6; i++)
-            {
-                if (i >= jointTransforms.Length || jointTransforms[i] == null) continue;
-
-                if (useArticulationBody)
-                {
-                    // If using Unity URDF Importer, the joints are usually ArticulationBodies.
-                    // Accessing ArticulationBody joint positions is different.
-                    var body = jointTransforms[i].GetComponent<ArticulationBody>();
-                    if (body != null)
-                    {
-                        // ArticulationBody uses radians usually, but XDrive targets usually target degrees.
-                        // Let's assume input degrees and convert if needed.
-                        // Setting joint positions via ArticulationBody is complex (drives vs direct set).
-                        // For visualization (slave mode), we can try forcing positions via teleport if needed,
-                        // or better, drive targets if simulation is running.
-
-                        // Simple approach: Set drive target
-                        var drive = body.xDrive;
-                        drive.target = currentJoints[i];
-                        body.xDrive = drive;
-                    }
-                }
-                else
-                {
-                    // Standard Transform rotation
-                    // We assume local rotation relative to parent
-                    // Reset rotation to identity and apply axis rotation
-                    // Note: This overrides other rotations!
-                    // Better approach: Maintain initial rotation and add offset?
-                    // For typical robot arm visualization, local rotation around one axis is standard.
-
-                    jointTransforms[i].localRotation = Quaternion.AngleAxis(currentJoints[i], rotationAxes[i]);
                 }
             }
         }
