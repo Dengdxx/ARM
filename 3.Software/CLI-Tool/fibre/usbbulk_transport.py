@@ -19,7 +19,17 @@ WELL_KNOWN_VID_PID_PAIRS = [
 ]
 
 class USBBulkTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
+  """
+  为 USB 批量端点实现 PacketSource 和 PacketSink。
+  """
   def __init__(self, dev, logger):
+    """
+    初始化 USB 传输。
+
+    Args:
+        dev (usb.core.Device): PyUSB 设备实例。
+        logger (Logger): 记录器实例。
+    """
     self._logger = logger
     self.dev = dev
     self.intf = None
@@ -30,6 +40,12 @@ class USBBulkTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
   # information about the connected device
   ##
   def info(self):
+    """
+    返回描述设备配置的格式化字符串。
+
+    Returns:
+        str: 配置、接口和端点的描述。
+    """
     # loop through configurations
     string = ""
     for cfg in self.dev:
@@ -41,6 +57,9 @@ class USBBulkTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
     return string
 
   def init(self):
+    """
+    初始化 USB 设备，找到正确的接口和端点。
+    """
     # Under some conditions, the Linux USB/libusb stack ends up in a corrupt
     # state where there are a few packets in a receive queue but a call
     # to epr.read() does not return these packet until a new packet arrives.
@@ -90,10 +109,27 @@ class USBBulkTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
     self._logger.debug("EndpointAddress for reading {}".format(self.epr.bEndpointAddress))
 
   def deinit(self):
+    """
+    释放 USB 接口。
+    """
     if not self.intf is None:
       usb.util.release_interface(self.dev, self.intf)
 
   def process_packet(self, usbBuffer):
+    """
+    将数据包发送到 USB OUT 端点。
+
+    Args:
+        usbBuffer (bytes): 要发送的数据。
+
+    Returns:
+        int: 写入的字节数。
+
+    Raises:
+        ChannelBrokenException: 如果设备断开连接。
+        TimeoutError: 如果写入超时。
+        ChannelDamagedException: 如果发生暂停（可恢复）。
+    """
     try:
       ret = self.epw.write(usbBuffer, 0)
       if self._was_damaged:
@@ -121,6 +157,20 @@ class USBBulkTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
         raise fibre.protocol.ChannelDamagedException()
 
   def get_packet(self, deadline):
+    """
+    从 USB IN 端点读取数据包。
+
+    Args:
+        deadline (float): 截止时间戳。
+
+    Returns:
+        bytearray: 读取的数据。
+
+    Raises:
+        ChannelBrokenException: 如果设备断开连接。
+        TimeoutError: 如果读取超时。
+        ChannelDamagedException: 如果发生暂停（可恢复）。
+    """
     try:
       bufferLen = self.epr.wMaxPacketSize
       timeout = max(int((deadline - time.monotonic()) * 1000), 0)
@@ -152,9 +202,17 @@ class USBBulkTransport(fibre.protocol.PacketSource, fibre.protocol.PacketSink):
 
 def discover_channels(path, serial_number, callback, cancellation_token, channel_termination_token, logger):
   """
-  Scans for USB devices that match the path spec.
-  This function blocks until cancellation_token is set.
-  Channels spawned by this function run until channel_termination_token is set.
+  扫描与路径规范匹配的 USB 设备。
+  此函数阻塞直到设置了 cancellation_token。
+  由此函数生成的通道运行，直到设置了 channel_termination_token。
+
+  Args:
+      path (str): USB 路径规范 "BUS:DEVICE"。
+      serial_number (str): 要匹配的序列号。
+      callback (callable): 使用发现的通道调用的函数。
+      cancellation_token (Event): 停止发现的信号。
+      channel_termination_token (Event): 终止通道的信号。
+      logger (Logger): 记录器实例。
   """
   if path == None or path == "":
     bus = None
@@ -167,7 +225,7 @@ def discover_channels(path, serial_number, callback, cancellation_token, channel
       raise Exception("{} is not a valid USB path specification. "
                       "Expected a string of the format BUS:DEVICE where BUS "
                       "and DEVICE are integers.".format(path))
-  
+
   known_devices = []
   def device_matcher(device):
     #print("  test {:04X}:{:04X}".format(device.idVendor, device.idProduct))

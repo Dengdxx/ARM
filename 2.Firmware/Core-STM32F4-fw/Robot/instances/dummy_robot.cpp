@@ -17,6 +17,11 @@ inline float AbsMaxOf6(DOF6Kinematic::Joint6D_t _joints, uint8_t &_index)
 }
 
 
+/**
+ * @brief 构造函数，初始化机器人实例。
+ *
+ * @param _hcan CAN 句柄指针。
+ */
 DummyRobot::DummyRobot(CAN_HandleTypeDef* _hcan) :
     hcan(_hcan)
 {
@@ -33,6 +38,9 @@ DummyRobot::DummyRobot(CAN_HandleTypeDef* _hcan) :
 }
 
 
+/**
+ * @brief 析构函数，释放动态分配的资源。
+ */
 DummyRobot::~DummyRobot()
 {
     for (int j = 0; j <= 6; j++)
@@ -43,6 +51,11 @@ DummyRobot::~DummyRobot()
 }
 
 
+/**
+ * @brief 初始化机器人。
+ *
+ * 设置默认命令模式和关节速度。
+ */
 void DummyRobot::Init()
 {
     SetCommandMode(DEFAULT_COMMAND_MODE);
@@ -50,6 +63,9 @@ void DummyRobot::Init()
 }
 
 
+/**
+ * @brief 重启所有电机控制器并复位系统。
+ */
 void DummyRobot::Reboot()
 {
     motorJ[ALL]->Reboot();
@@ -58,6 +74,13 @@ void DummyRobot::Reboot()
 }
 
 
+/**
+ * @brief 移动关节到目标角度。
+ *
+ * 计算关节速度并发送控制指令。
+ *
+ * @param _joints 目标关节角度。
+ */
 void DummyRobot::MoveJoints(DOF6Kinematic::Joint6D_t _joints)
 {
     for (int j = 1; j <= 6; j++)
@@ -68,6 +91,19 @@ void DummyRobot::MoveJoints(DOF6Kinematic::Joint6D_t _joints)
 }
 
 
+/**
+ * @brief 使用关节角度控制机器人运动。
+ *
+ * 检查目标角度是否在限制范围内，并计算各关节的动态速度以同步到达目标。
+ *
+ * @param _j1 关节 1 角度。
+ * @param _j2 关节 2 角度。
+ * @param _j3 关节 3 角度。
+ * @param _j4 关节 4 角度。
+ * @param _j5 关节 5 角度。
+ * @param _j6 关节 6 角度。
+ * @return true 移动指令有效且已发送。
+ */
 bool DummyRobot::MoveJ(float _j1, float _j2, float _j3, float _j4, float _j5, float _j6)
 {
     DOF6Kinematic::Joint6D_t targetJointsTmp(_j1, _j2, _j3, _j4, _j5, _j6);
@@ -102,6 +138,19 @@ bool DummyRobot::MoveJ(float _j1, float _j2, float _j3, float _j4, float _j5, fl
 }
 
 
+/**
+ * @brief 使用笛卡尔坐标控制机器人运动（直线运动）。
+ *
+ * 使用逆运动学计算关节角度，并在多个解中选择最优解。
+ *
+ * @param _x 目标 X 坐标。
+ * @param _y 目标 Y 坐标。
+ * @param _z 目标 Z 坐标。
+ * @param _a 目标 A 角度。
+ * @param _b 目标 B 角度。
+ * @param _c 目标 C 角度。
+ * @return true 移动指令有效且已发送。
+ */
 bool DummyRobot::MoveL(float _x, float _y, float _z, float _a, float _b, float _c)
 {
     DOF6Kinematic::Pose6D_t pose6D(_x, _y, _z, _a, _b, _c);
@@ -158,12 +207,20 @@ bool DummyRobot::MoveL(float _x, float _y, float _z, float _a, float _b, float _
     return false;
 }
 
+/**
+ * @brief 请求所有电机更新其角度。
+ */
 void DummyRobot::UpdateJointAngles()
 {
     motorJ[ALL]->UpdateAngle();
 }
 
 
+/**
+ * @brief 更新关节角度的回调函数。
+ *
+ * 更新内部关节角度状态和运动完成标志。
+ */
 void DummyRobot::UpdateJointAnglesCallback()
 {
     for (int i = 1; i <= 6; i++)
@@ -178,6 +235,11 @@ void DummyRobot::UpdateJointAnglesCallback()
 }
 
 
+/**
+ * @brief 设置机器人关节运动速度。
+ *
+ * @param _speed 速度百分比 (0-100)。
+ */
 void DummyRobot::SetJointSpeed(float _speed)
 {
     if (_speed < 0)_speed = 0;
@@ -187,6 +249,11 @@ void DummyRobot::SetJointSpeed(float _speed)
 }
 
 
+/**
+ * @brief 设置机器人关节加速度。
+ *
+ * @param _acc 加速度百分比 (0-100)。
+ */
 void DummyRobot::SetJointAcceleration(float _acc)
 {
     if (_acc < 0)_acc = 0;
@@ -197,6 +264,11 @@ void DummyRobot::SetJointAcceleration(float _acc)
 }
 
 
+/**
+ * @brief 校准零点偏移。
+ *
+ * 执行一系列动作来确定机器人的机械零点。
+ */
 void DummyRobot::CalibrateHomeOffset()
 {
     // Disable FixUpdate, but not disable motors
@@ -230,6 +302,9 @@ void DummyRobot::CalibrateHomeOffset()
 }
 
 
+/**
+ * @brief 回到原点。
+ */
 void DummyRobot::Homing()
 {
     float lastSpeed = jointSpeed;
@@ -244,6 +319,9 @@ void DummyRobot::Homing()
 }
 
 
+/**
+ * @brief 进入休息姿态。
+ */
 void DummyRobot::Resting()
 {
     float lastSpeed = jointSpeed;
@@ -259,6 +337,11 @@ void DummyRobot::Resting()
 }
 
 
+/**
+ * @brief 设置机器人使能状态。
+ *
+ * @param _enable true 为启用，false 为禁用。
+ */
 void DummyRobot::SetEnable(bool _enable)
 {
     motorJ[ALL]->SetEnable(_enable);
@@ -266,6 +349,11 @@ void DummyRobot::SetEnable(bool _enable)
 }
 
 
+/**
+ * @brief 更新末端执行器的 6D 位姿。
+ *
+ * 使用正向运动学根据当前关节角度计算位姿。
+ */
 void DummyRobot::UpdateJointPose6D()
 {
     dof6Solver->SolveFK(currentJoints, currentPose6D);
@@ -275,18 +363,33 @@ void DummyRobot::UpdateJointPose6D()
 }
 
 
+/**
+ * @brief 检查机器人是否正在运动。
+ *
+ * @return true 正在运动。
+ */
 bool DummyRobot::IsMoving()
 {
     return jointsStateFlag != 0b1111110;
 }
 
 
+/**
+ * @brief 检查机器人是否已启用。
+ *
+ * @return true 已启用。
+ */
 bool DummyRobot::IsEnabled()
 {
     return isEnabled;
 }
 
 
+/**
+ * @brief 设置命令模式。
+ *
+ * @param _mode 命令模式枚举值。
+ */
 void DummyRobot::SetCommandMode(uint32_t _mode)
 {
     if (_mode < COMMAND_TARGET_POINT_SEQUENTIAL ||
@@ -312,6 +415,12 @@ void DummyRobot::SetCommandMode(uint32_t _mode)
 }
 
 
+/**
+ * @brief 构造函数，初始化机械手。
+ *
+ * @param _hcan CAN 句柄指针。
+ * @param _id 机械手 CAN ID。
+ */
 DummyHand::DummyHand(CAN_HandleTypeDef* _hcan, uint8_t
 _id) :
     nodeID(_id), hcan(_hcan)
@@ -328,6 +437,11 @@ _id) :
 }
 
 
+/**
+ * @brief 设置机械手角度（张开度）。
+ *
+ * @param _angle 角度值 (0-30)。
+ */
 void DummyHand::SetAngle(float _angle)
 {
     if (_angle > 30)_angle = 30;
@@ -345,6 +459,11 @@ void DummyHand::SetAngle(float _angle)
 }
 
 
+/**
+ * @brief 设置机械手最大电流（力度）。
+ *
+ * @param _val 电流值 (0-1)。
+ */
 void DummyHand::SetMaxCurrent(float _val)
 {
     if (_val > 1)_val = 1;
@@ -362,6 +481,11 @@ void DummyHand::SetMaxCurrent(float _val)
 }
 
 
+/**
+ * @brief 启用或禁用机械手。
+ *
+ * @param _enable true 为启用，false 为禁用。
+ */
 void DummyHand::SetEnable(bool _enable)
 {
     if (_enable)
@@ -371,6 +495,12 @@ void DummyHand::SetEnable(bool _enable)
 }
 
 
+/**
+ * @brief 将命令推入 FIFO 队列。
+ *
+ * @param _cmd 命令字符串。
+ * @return 队列剩余空间。
+ */
 uint32_t DummyRobot::CommandHandler::Push(const std::string &_cmd)
 {
     osStatus_t status = osMessageQueuePut(commandFifo, _cmd.c_str(), 0U, 0U);
@@ -381,6 +511,11 @@ uint32_t DummyRobot::CommandHandler::Push(const std::string &_cmd)
 }
 
 
+/**
+ * @brief 紧急停止。
+ *
+ * 立即停止机器人并清除命令队列。
+ */
 void DummyRobot::CommandHandler::EmergencyStop()
 {
     context->MoveJ(context->currentJoints.a[0], context->currentJoints.a[1], context->currentJoints.a[2],
@@ -391,6 +526,12 @@ void DummyRobot::CommandHandler::EmergencyStop()
 }
 
 
+/**
+ * @brief 从 FIFO 队列弹出一个命令。
+ *
+ * @param timeout 等待时间。
+ * @return 弹出的命令字符串。
+ */
 std::string DummyRobot::CommandHandler::Pop(uint32_t timeout)
 {
     osStatus_t status = osMessageQueueGet(commandFifo, strBuffer, nullptr, timeout);
@@ -399,12 +540,25 @@ std::string DummyRobot::CommandHandler::Pop(uint32_t timeout)
 }
 
 
+/**
+ * @brief 获取命令队列的剩余空间。
+ *
+ * @return 剩余空间大小。
+ */
 uint32_t DummyRobot::CommandHandler::GetSpace()
 {
     return osMessageQueueGetSpace(commandFifo);
 }
 
 
+/**
+ * @brief 解析并执行命令。
+ *
+ * 支持关节移动 (>) 和笛卡尔移动 (@) 命令。
+ *
+ * @param _cmd 命令字符串。
+ * @return 队列剩余空间。
+ */
 uint32_t DummyRobot::CommandHandler::ParseCommand(const std::string &_cmd)
 {
     uint8_t argNum;
@@ -511,18 +665,33 @@ uint32_t DummyRobot::CommandHandler::ParseCommand(const std::string &_cmd)
 }
 
 
+/**
+ * @brief 清除命令队列。
+ */
 void DummyRobot::CommandHandler::ClearFifo()
 {
     osMessageQueueReset(commandFifo);
 }
 
 
+/**
+ * @brief 设置调整标志。
+ *
+ * @param _flag 调整标志位掩码。
+ */
 void DummyRobot::TuningHelper::SetTuningFlag(uint8_t _flag)
 {
     tuningFlag = _flag;
 }
 
 
+/**
+ * @brief 执行调整助手的一个时间步。
+ *
+ * 产生正弦波信号驱动选定的电机进行调试。
+ *
+ * @param _timeMillis 时间步长（毫秒）。
+ */
 void DummyRobot::TuningHelper::Tick(uint32_t _timeMillis)
 {
     time += PI * 2 * frequency * (float) _timeMillis / 1000.0f;
@@ -534,6 +703,12 @@ void DummyRobot::TuningHelper::Tick(uint32_t _timeMillis)
 }
 
 
+/**
+ * @brief 设置调整信号的频率和幅度。
+ *
+ * @param _freq 频率 (0.1 - 5 Hz)。
+ * @param _amp 幅度 (1 - 50)。
+ */
 void DummyRobot::TuningHelper::SetFreqAndAmp(float _freq, float _amp)
 {
     if (_freq > 5)_freq = 5;

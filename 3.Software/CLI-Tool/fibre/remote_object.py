@@ -1,5 +1,5 @@
 """
-Provides functions for the discovery of Fibre nodes
+提供用于映射远程 Fibre 对象、函数和属性的类。
 """
 
 import sys
@@ -9,34 +9,50 @@ import threading
 import fibre.protocol
 
 class ObjectDefinitionError(Exception):
+    """当 JSON 中的对象定义出现错误时引发。"""
     pass
 
 codecs = {}
 
 class StructCodec():
     """
-    Generic serializer/deserializer based on struct pack
+    基于 struct pack 的通用序列化/反序列化器。
     """
     def __init__(self, struct_format, target_type):
+        """
+        初始化编解码器。
+
+        Args:
+            struct_format (str): struct 格式字符串。
+            target_type (type): 要转换到的/从其转换的 Python 类型。
+        """
         self._struct_format = struct_format
         self._target_type = target_type
     def get_length(self):
+        """返回编码数据的字节长度。"""
         return struct.calcsize(self._struct_format)
     def serialize(self, value):
+        """将值序列化为字节。"""
         value = self._target_type(value)
         return struct.pack(self._struct_format, value)
     def deserialize(self, buffer):
+        """将字节反序列化为值。"""
         value = struct.unpack(self._struct_format, buffer)
         value = value[0] if len(value) == 1 else value
         return self._target_type(value)
 
 class RemoteProperty():
     """
-    Used internally by dynamically created objects to translate
-    property assignments and fetches into endpoint operations on the
-    object's associated channel
+    由动态创建的对象内部使用，用于将属性赋值和获取转换为对象关联通道上的端点操作。
     """
     def __init__(self, json_data, parent):
+        """
+        初始化远程属性。
+
+        Args:
+            json_data (dict): 属性的 JSON 定义。
+            parent (RemoteObject): 父对象。
+        """
         self._parent = parent
         self.__channel__ = parent.__channel__
         id_str = json_data.get("id", None)
@@ -55,7 +71,7 @@ class RemoteProperty():
         # Find all codecs that match the type_str and build a dictionary
         # of the form {type1: codec1, type2: codec2}
         eligible_types = {k: v[type_str] for (k,v) in codecs.items() if type_str in v}
-        
+
         if not eligible_types:
             raise ObjectDefinitionError("unsupported codec {}".format(type_str))
 
@@ -69,15 +85,30 @@ class RemoteProperty():
         self._can_write = 'w' in access_mode
 
     def get_value(self):
+        """
+        从远程设备获取属性的值。
+
+        Returns:
+            属性的值。
+        """
         buffer = self._parent.__channel__.remote_endpoint_operation(self._id, None, True, self._codec.get_length())
         return self._codec.deserialize(buffer)
 
     def set_value(self, value):
+        """
+        设置远程设备上的属性值。
+
+        Args:
+            value: 要设置的新值。
+        """
         buffer = self._codec.serialize(value)
         # TODO: Currenly we wait for an ack here. Settle on the default guarantee.
         self._parent.__channel__.remote_endpoint_operation(self._id, buffer, True, 0)
 
     def _dump(self):
+        """
+        返回用于调试的属性字符串表示形式。
+        """
         if self._name == "serial_number":
             # special case: serial number should be displayed in hex (TODO: generalize)
             val_str = "{:012X}".format(self.get_value())
@@ -90,11 +121,13 @@ class RemoteProperty():
 
 class EndpointRefCodec():
     """
-    Serializer/deserializer for an endpoint reference
+    端点引用的序列化/反序列化器。
     """
     def get_length(self):
+        """返回编码的端点引用的字节长度。"""
         return struct.calcsize("<HH")
     def serialize(self, value):
+        """将 RemoteProperty 或 None 序列化为字节。"""
         if value is None:
             (ep_id, ep_crc) = (0, 0)
         elif isinstance(value, RemoteProperty):
@@ -103,6 +136,7 @@ class EndpointRefCodec():
             raise TypeError("Expected value of type RemoteProperty or None but got '{}'. En example for a RemoteProperty is this expression: odrv0.axis0.controller._remote_attributes['pos_setpoint']".format(type(value).__name__))
         return struct.pack("<HH", ep_id, ep_crc)
     def deserialize(self, buffer):
+        """将字节反序列化为端点引用（ID、CRC 元组）。"""
         return struct.unpack("<HH", buffer)
 
 codecs[int] = {
@@ -131,9 +165,16 @@ codecs[RemoteProperty] = {
 
 class RemoteFunction(object):
     """
-    Represents a callable function that maps to a function call on a remote object
+    表示一个可调用函数，该函数映射到远程对象上的函数调用。
     """
     def __init__(self, json_data, parent):
+        """
+        初始化远程函数。
+
+        Args:
+            json_data (dict): 函数的 JSON 定义。
+            parent (RemoteObject): 父对象。
+        """
         self._parent = parent
         id_str = json_data.get("id", None)
         if id_str is None:
@@ -155,6 +196,15 @@ class RemoteFunction(object):
             self._outputs.append(RemoteProperty(param_json, parent))
 
     def __call__(self, *args):
+        """
+        调用远程函数。
+
+        Args:
+            *args: 函数的参数。
+
+        Returns:
+            函数调用的结果（如果有）。
+        """
         if (len(self._inputs) != len(args)):
             raise TypeError("expected {} arguments but have {}".format(len(self._inputs), len(args)))
         for i in range(len(args)):
@@ -164,16 +214,22 @@ class RemoteFunction(object):
             return self._outputs[0].get_value()
 
     def _dump(self):
+        """返回函数签名的字符串表示形式。"""
         return "{}({})".format(self._name, ", ".join("{}: {}".format(x._name, x._property_type.__name__) for x in self._inputs))
 
 class RemoteObject(object):
     """
-    Object with functions and properties that map to remote endpoints
+    具有映射到远程端点的函数和属性的对象。
     """
     def __init__(self, json_data, parent, channel, logger):
         """
-        Creates an object that implements the specified JSON type description by
-        communicating over the provided channel
+        创建一个对象，该对象通过在提供的通道上进行通信来实现指定的 JSON 类型描述。
+
+        Args:
+            json_data (dict): 对象的 JSON 描述。
+            parent (RemoteObject): 父对象。
+            channel (Channel): 通信通道。
+            logger (Logger): 要使用的记录器。
         """
         # Directly write to __dict__ to avoid calling __setattr__ too early
         object.__getattribute__(self, "__dict__")["_remote_attributes"] = {}
@@ -215,6 +271,9 @@ class RemoteObject(object):
         channel._channel_broken.subscribe(self._tear_down)
 
     def _dump(self, indent, depth):
+        """
+        递归转储对象结构。
+        """
         if depth <= 0:
             return "..."
         lines = []
@@ -233,6 +292,9 @@ class RemoteObject(object):
         return self.__str__()
 
     def __getattribute__(self, name):
+        """
+        拦截属性访问以获取远程属性值。
+        """
         attr = object.__getattribute__(self, "_remote_attributes").get(name, None)
         if isinstance(attr, RemoteProperty):
             if attr._can_read:
@@ -246,6 +308,9 @@ class RemoteObject(object):
             #raise AttributeError("Attribute {} not found".format(name))
 
     def __setattr__(self, name, value):
+        """
+        拦截属性赋值以设置远程属性值。
+        """
         attr = object.__getattribute__(self, "_remote_attributes").get(name, None)
         if isinstance(attr, RemoteProperty):
             if attr._can_write:
@@ -258,6 +323,9 @@ class RemoteObject(object):
             raise AttributeError("Attribute {} not found".format(name))
 
     def _tear_down(self):
+        """
+        当通道中断时清理对象。
+        """
         # Clear all remote members
         for k in self._remote_attributes.keys():
             self.__dict__.pop(k)

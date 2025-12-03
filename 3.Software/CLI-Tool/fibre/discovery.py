@@ -1,5 +1,5 @@
 """
-Provides functions for the discovery of Fibre nodes
+提供发现 Fibre 节点的功能。
 """
 
 import sys
@@ -42,6 +42,12 @@ except ImportError:
     pass
 
 def noprint(text):
+    """
+    一个无操作的打印函数。
+
+    Args:
+        text: 将被打印的文本。
+    """
     pass
 
 def find_all(path, serial_number,
@@ -50,17 +56,30 @@ def find_all(path, serial_number,
          channel_termination_token,
          logger):
     """
-    Starts scanning for Fibre nodes that match the specified path spec and calls
-    the callback for each Fibre node that is found.
-    This function is non-blocking.
+    开始扫描与指定路径规范匹配的 Fibre 节点，并为找到的每个 Fibre 节点调用回调函数。
+    此函数是非阻塞的。
+
+    Args:
+        path (str): 搜索路径规范（例如 'usb', 'serial:/dev/ttyUSB0'）。
+        serial_number (str): 要筛选的设备序列号。
+        did_discover_object_callback (callable): 发现设备时调用的函数。
+                                                它接收发现的对象作为参数。
+        search_cancellation_token (Event): 用于发出取消搜索信号的事件。
+        channel_termination_token (Event): 用于发出终止通道信号的事件。
+        logger (Logger): 用于调试输出的记录器实例。
+
+    Returns:
+        None
     """
 
     def did_discover_channel(channel):
         """
-        Inits an object from a given channel and then calls did_discover_object_callback
-        with the created object
-        This queries the endpoint 0 on that channel to gain information
-        about the interface, which is then used to init the corresponding object.
+        从给定的通道初始化一个对象，然后调用 did_discover_object_callback
+        并传入创建的对象。
+        这将查询该通道上的端点 0 以获取有关接口的信息，然后用于初始化相应的对象。
+
+        Args:
+            channel (Channel): 发现的通信通道。
         """
         try:
             logger.debug("Connecting to device on " + channel._name)
@@ -114,7 +133,18 @@ def find_any(path="usb", serial_number=None,
         search_cancellation_token=None, channel_termination_token=None,
         timeout=None, logger=Logger(verbose=False)):
     """
-    Blocks until the first matching Fibre node is connected and then returns that node
+    阻塞直到连接第一个匹配的 Fibre 节点，然后返回该节点。
+
+    Args:
+        path (str): 搜索路径规范（默认为 "usb"）。
+        serial_number (str): 要筛选的设备序列号（可选）。
+        search_cancellation_token (Event): 用于发出取消搜索信号的事件（可选）。
+        channel_termination_token (Event): 用于发出终止通道信号的事件（可选）。
+        timeout (float): 等待设备的最长时间（以秒为单位）（可选）。
+        logger (Logger): 要使用的记录器实例（默认为非详细记录器）。
+
+    Returns:
+        RemoteObject: 发现的远程对象（Fibre 节点），如果未找到/超时，则为 None。
     """
     result = [ None ]
     done_signal = Event(search_cancellation_token)
